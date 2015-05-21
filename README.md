@@ -1,1 +1,0 @@
-# mopidy-spotify-web
