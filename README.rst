@@ -63,7 +63,7 @@ The following configuration values are available:
 - ``spotify_web/refresh_token``: Your Spotify refresh token. You *must* provide this.
 
 - ``spotify_web/auth_server_url``: url to the authorization endpoint
- of the Accounts service. You *must* provide this. Should contain https://accounts.spotify.com/api/token
+  of the Accounts service. You *must* provide this. Should contain https://accounts.spotify.com/api/token
 
 
 Project resources
