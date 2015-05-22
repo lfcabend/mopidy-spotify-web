@@ -1,8 +1,6 @@
 from __future__ import unicode_literals
 
-from mopidy.models import Track
-from mopidy.models import Artist
-from mopidy.models import Album
+from mopidy.models import Album, Artist, Track
 
 
 def to_mopidy_tracks(spotipy_items):
@@ -14,9 +12,9 @@ def to_mopidy_tracks(spotipy_items):
 
 def to_mopidy_track(track):
     return Track(uri=track['uri'],
-                     name=track['name'],
-                     album=to_mopidy_album(track['album']),
-                     artists=to_mopidy_artists(track['artists']))
+                 name=track['name'],
+                 album=to_mopidy_album(track['album']),
+                 artists=to_mopidy_artists(track['artists']))
 
 
 def to_mopidy_artists(spotipy_artists):

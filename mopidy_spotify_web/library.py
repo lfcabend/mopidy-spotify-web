@@ -1,14 +1,17 @@
 from __future__ import unicode_literals
 
-from mopidy import backend
-from mopidy.models import Ref
-import logging
-import urllib
-import spotipy
-from translator import to_mopidy_track
-import urllib2
 import base64
 import json
+import logging
+import urllib
+import urllib2
+
+from mopidy import backend
+from mopidy.models import Ref
+
+import spotipy
+
+from translator import to_mopidy_track
 
 logger = logging.getLogger(__name__)
 

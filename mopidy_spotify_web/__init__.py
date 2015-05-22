@@ -1,15 +1,16 @@
 from __future__ import unicode_literals
 
-import os
 import logging
+import os
 
 from mopidy import config, ext
 
-__version__ = '0.1.0'
 
 logger = logging.getLogger(__name__)
-
 logger.debug("loading mopidy-web extension")
+
+__version__ = '0.1.0'
+
 
 class Extension(ext.Extension):
 
