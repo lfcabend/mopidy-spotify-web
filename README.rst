@@ -45,11 +45,9 @@ Configuration
 Example configuration::
 
     [spotify_web]
-    enabled = true
     spotify_client_id = 'YOUR_CLIENT_ID'
     spotify_client_secret = 'YOUR_SECRET'
     refresh_token = 'YOUR_REFRESH_TOKEN'
-    auth_server_url= https://accounts.spotify.com/api/token
 
 The following configuration values are available:
 
