@@ -127,12 +127,12 @@ class Cache:
         logger.debug("initializing SpotifyWebLibraryProvider cache")
         self.albums2tracks = {}
         self.artists2albums = {}
-        self.sortedAlbums = set()
-        self.sortedArtists = set()
-        self.tracks = set()
+        self.sortedAlbums = []
+        self.sortedArtists = []
+        self.tracks = []
         for t in tracks:
             logger.debug("Adding track %s", t.name)
-            self.tracks.add(Ref.track(name=t.name, uri=t.uri))
+            self.tracks.append(Ref.track(name=t.name, uri=t.uri))
             if hasattr(t, 'album'):
                 self.add_album_and_artists(t)
 
@@ -143,13 +143,15 @@ class Cache:
         logger.debug('Going to add album %s', name)
         album_dir = Ref.directory(uri=album.uri, name=name)
         track_ref = Ref.track(name=track.name, uri=track.uri)
-        self.sortedAlbums.add(album_dir)
+        if album.uri not in self.albums2tracks:
+            self.sortedAlbums.append(album_dir)
 
         # adding track to album2tracks
         if album.uri in self.albums2tracks:
-            self.albums2tracks[album.uri].add(track_ref)
+            if track_ref not in self.albums2tracks[album.uri]:
+                self.albums2tracks[album.uri].append(track_ref)
         else:
-            self.albums2tracks[album.uri] = set([track_ref])
+            self.albums2tracks[album.uri] = [track_ref]
 
         if hasattr(track, 'artists'):
             self.add_artists(track, album_dir)
@@ -160,9 +162,11 @@ class Cache:
             logger.debug('Going to add artist %s', artist_name)
 
             artist_dir = Ref.directory(uri=artist.uri, name=artist_name)
-            self.sortedArtists.add(artist_dir)
+            if artist.uri not in self.artists2albums:
+                self.sortedArtists.append(artist_dir)
 
             if artist.uri in self.artists2albums:
-                self.artists2albums[artist.uri].add(album_dir)
+                if album_dir not in self.artists2albums[artist.uri]:
+                    self.artists2albums[artist.uri].append(album_dir)
             else:
-                self.artists2albums[artist.uri] = set([album_dir])
+                self.artists2albums[artist.uri] = [album_dir]
