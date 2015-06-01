@@ -136,6 +136,11 @@ class Cache:
             if hasattr(t, 'album'):
                 self.add_album_and_artists(t)
 
+        logger.debug('Sorting albums and artists')
+        cmp_dir_names=lambda x,y: cmp(x.name, y.name)
+        self.sortedAlbums.sort(cmp_dir_names)
+        self.sortedArtists.sort(cmp_dir_names)
+
     def add_album_and_artists(self, track):
         album = track.album
 
