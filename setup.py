@@ -29,6 +29,7 @@ setup(
         'Mopidy >= 0.19.0',
         'Pykka >= 1.1',
         'Mopidy-Spotify >= 1.2.0',
+        'requests',
         'spotipy',
     ],
     # test_suite='nose.collector',
