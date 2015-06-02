@@ -76,7 +76,7 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         self.refresh()
 
     def refresh(self, uri=None):
-        token = get_fresh_token(self.backend.config['spotify_web'])
+        token = get_fresh_token(self.backend.config)
         if token is not None:
             tracks = get_tracks_from_web_api(token)
         else:
