@@ -14,3 +14,6 @@ class SpotifyWebBackend(pykka.ThreadingActor, backend.Backend):
         self.config = config['spotify_web']
         self.library = SpotifyWebLibraryProvider(backend=self)
         self.uri_schemes = ['spotifyweb']
+
+    def on_start(self):
+        self.actor_ref.proxy().library.refresh()

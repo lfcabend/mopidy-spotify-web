@@ -73,7 +73,6 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
                       Ref.directory(uri='spotifyweb:albums',
                                     name='Albums')]
         self._cache = None
-        self.refresh()
 
     def refresh(self, uri=None):
         token = get_fresh_token(self.backend.config)
