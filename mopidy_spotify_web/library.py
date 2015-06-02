@@ -66,13 +66,10 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
 
     def __init__(self, *args, **kwargs):
         super(SpotifyWebLibraryProvider, self).__init__(*args, **kwargs)
-        logger.debug("initializing SpotifyWebLibraryProvider "
-                     "from mopidy-web backend")
-        self._root = [Ref.directory(uri='spotifyweb:artists',
-                                    name='Artists'),
-                      Ref.directory(uri='spotifyweb:albums',
-                                    name='Albums')]
         self._cache = None
+        self._root = [
+            Ref.directory(uri='spotifyweb:artists', name='Artists'),
+            Ref.directory(uri='spotifyweb:albums', name='Albums')]
 
     def refresh(self, uri=None):
         token = get_fresh_token(self.backend.config)
@@ -80,7 +77,6 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             tracks = get_tracks_from_web_api(token)
         else:
             tracks = []
-
         self._cache = Cache(tracks)
 
     def lookup(self, uri):
