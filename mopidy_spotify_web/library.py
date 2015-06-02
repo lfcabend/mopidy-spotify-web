@@ -16,29 +16,26 @@ logger = logging.getLogger(__name__)
 
 def get_tracks_from_web_api(token):
     try:
-        logger.debug('Loading spotify-web library from '
-                     'web-api using token: %s', token)
-        sp = spotipy.Spotify(auth=token)
-        con = True
-        offset = 0
-        limit = 50
-        tracks = []
-        while con:
-            results = sp.current_user_saved_tracks(
-                limit=limit, offset=offset)
-            size = len(results['items'])
-            logger.debug('On spotify-web Got results %s for '
-                         'offset %s', str(size), str(offset))
-            if size > 0:
-                for item in results['items']:
-                    tracks.append(to_mopidy_track(item['track']))
-                offset += size
+        logger.debug(
+            'Loading spotify-web library from web-api using token: %s', token)
 
+        sp = spotipy.Spotify(auth=token)
+        offset = 0
+        tracks = []
+
+        while True:
+            results = sp.current_user_saved_tracks(limit=50, offset=offset)
+            logger.debug('On spotify-web Got results %s for offset %s',
+                         len(results['items']), offset)
+            for item in results['items']:
+                tracks.append(to_mopidy_track(item['track']))
+                offset += 1
             if results['next'] is None:
-                con = False
+                break
+
         return tracks
     except spotipy.SpotifyException as e:
-        logger.error('Spotipy error({0}): {1}'.format(e.code, e.msg))
+        logger.error('Spotipy error(%s): %s', e.code, e.msg)
         return []
 
 
