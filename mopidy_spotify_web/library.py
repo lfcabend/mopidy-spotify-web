@@ -42,10 +42,9 @@ def get_tracks_from_web_api(token):
 def get_fresh_token(config):
     try:
         logger.debug("authenticating")
-        auth = (config['spotify_client_id'], config['spotify_client_secret'])
-        response = requests.post(config['auth_server_url'], auth=auth, data={
-            'grant_type': 'refresh_token',
-            'refresh_token': config['refresh_token'],
+        auth = (config['client_id'], config['client_secret'])
+        response = requests.post(config['token_url'], auth=auth, data={
+            'grant_type': 'client_credentials',
         })
         logger.debug("authentication response: %s", response.content)
         access_token = response.json()['access_token']
