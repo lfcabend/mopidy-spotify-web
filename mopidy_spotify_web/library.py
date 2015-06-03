@@ -1,13 +1,11 @@
 from __future__ import unicode_literals
 
-import base64
-import json
 import logging
-import urllib
-import urllib2
 
 from mopidy import backend
 from mopidy.models import Ref
+
+import requests
 
 import spotipy
 
@@ -18,59 +16,45 @@ logger = logging.getLogger(__name__)
 
 def get_tracks_from_web_api(token):
     try:
-        logger.debug('Loading spotify-web library from '
-                     'web-api using token: %s', token)
-        sp = spotipy.Spotify(auth=token)
-        con = True
-        offset = 0
-        limit = 50
-        tracks = []
-        while con:
-            results = sp.current_user_saved_tracks(
-                limit=limit, offset=offset)
-            size = len(results['items'])
-            logger.debug('On spotify-web Got results %s for '
-                         'offset %s', str(size), str(offset))
-            if size > 0:
-                for item in results['items']:
-                    tracks.append(to_mopidy_track(item['track']))
-                offset += size
+        logger.debug(
+            'Loading spotify-web library from web-api using token: %s', token)
 
+        sp = spotipy.Spotify(auth=token)
+        offset = 0
+        tracks = []
+
+        while True:
+            results = sp.current_user_saved_tracks(limit=50, offset=offset)
+            logger.debug('On spotify-web Got results %s for offset %s',
+                         len(results['items']), offset)
+            for item in results['items']:
+                tracks.append(to_mopidy_track(item['track']))
+                offset += 1
             if results['next'] is None:
-                con = False
+                break
+
         return tracks
     except spotipy.SpotifyException as e:
-        logger.error('Spotipy error({0}): {1}'.format(e.code, e.msg))
+        logger.error('Spotipy error(%s): %s', e.code, e.msg)
         return []
 
 
 def get_fresh_token(config):
     try:
         logger.debug("authenticating")
-        auth_server_token_refresh_url = \
-            config['spotify_web']['auth_server_url']
-        client_id = config['spotify_web']['spotify_client_id']
-        client_secret = config['spotify_web']['spotify_client_secret']
-        auth_buffer = '%s:%s' % (client_id, client_secret)
-        buffer_base_64 = base64.b64encode(auth_buffer)
-        authorization_header = 'Basic %s' % buffer_base_64
-        refresh_token = config['spotify_web']['refresh_token']
-        payload = urllib.urlencode({'grant_type': 'refresh_token',
-                                    'refresh_token': refresh_token})
-        request = urllib2.Request(auth_server_token_refresh_url, data=payload)
-        request.add_header('Authorization', authorization_header)
-        content = urllib2.urlopen(request).read()
-        logger.debug("authentication response: %s", content)
-        json_body = json.loads(content)
-        access_token = json_body['access_token']
+        auth = (config['spotify_client_id'], config['spotify_client_secret'])
+        response = requests.post(config['auth_server_url'], auth=auth, data={
+            'grant_type': 'refresh_token',
+            'refresh_token': config['refresh_token'],
+        })
+        logger.debug("authentication response: %s", response.content)
+        access_token = response.json()['access_token']
         logger.debug("authentication token: %s", access_token)
         return access_token
-    except urllib2.URLError as e:
-        logger.error('While posting auth config, '
-                     'URLError error: {0}, {1}'.format(e.reason, e.message))
-    except urllib2.HTTPError as e:
-        logger.error('While posting auth config, '
-                     'HTTPError error({0}): {1}'.format(e.errno, e.strerror))
+    except requests.exceptions.RequestException as e:
+        logger.error('Refreshing the auth token failed: %s', e)
+    except ValueError as e:
+        logger.error('Decoding the JSON auth token response failed: %s', e)
 
 
 class SpotifyWebLibraryProvider(backend.LibraryProvider):
@@ -79,14 +63,10 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
 
     def __init__(self, *args, **kwargs):
         super(SpotifyWebLibraryProvider, self).__init__(*args, **kwargs)
-        logger.debug("initializing SpotifyWebLibraryProvider "
-                     "from mopidy-web backend")
-        self._root = [Ref.directory(uri='spotifyweb:artists',
-                                    name='Artists'),
-                      Ref.directory(uri='spotifyweb:albums',
-                                    name='Albums')]
         self._cache = None
-        self.refresh()
+        self._root = [
+            Ref.directory(uri='spotifyweb:artists', name='Artists'),
+            Ref.directory(uri='spotifyweb:albums', name='Albums')]
 
     def refresh(self, uri=None):
         token = get_fresh_token(self.backend.config)
@@ -94,7 +74,6 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             tracks = get_tracks_from_web_api(token)
         else:
             tracks = []
-
         self._cache = Cache(tracks)
 
     def lookup(self, uri):
@@ -137,7 +116,7 @@ class Cache:
                 self.add_album_and_artists(t)
 
         logger.debug('Sorting albums and artists')
-        cmp_dir_names=lambda x,y: cmp(x.name, y.name)
+        cmp_dir_names = lambda x, y: cmp(x.name, y.name)
         self.sortedAlbums.sort(cmp_dir_names)
         self.sortedArtists.sort(cmp_dir_names)
 

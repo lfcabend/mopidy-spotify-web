@@ -75,6 +75,13 @@ Project resources
 Changelog
 =========
 
+v0.2.0 (unreleased)
+-------------------
+
+- Use ``requests`` module for fetching tokens.
+- Blocking initialization moved out of critical startup path.
+- Various internal cleanups to make code more Pythonic.
+
 v0.1.0 (2015-05-03)
 -------------------
 
