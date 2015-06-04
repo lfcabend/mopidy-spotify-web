@@ -133,8 +133,8 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
                     arr += [ Ref.album(uri=album['uri'],
                                     name=album['name']) for album in res['albums']['items'] ]
                 return arr
-            except Exception as e:
-                print('error', e);
+            except spotipy.SpotifyException as e:
+                logger.error('error, access_token invalid ?')
                 return []
         else:
             return []
