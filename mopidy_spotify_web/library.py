@@ -66,7 +66,10 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         self._cache = None
         self._root = [
             Ref.directory(uri='spotifyweb:artists', name='Artists'),
-            Ref.directory(uri='spotifyweb:albums', name='Albums')]
+            Ref.directory(uri='spotifyweb:albums', name='Albums'),
+            Ref.directory(uri='spotifyweb:featured-playlists', name='Featured playlists'),
+            Ref.directory(uri='spotifyweb:new-releases', name='New releases'),
+            Ref.directory(uri='spotifyweb:categories', name='Categories')]
 
     def refresh(self, uri=None):
         token = get_fresh_token(self.backend.config)
@@ -97,6 +100,28 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         elif uri == 'spotifyweb:albums':
             return self._cache.sortedAlbums
             # return Ref directory for all albums
+        elif uri.startswith('spotifyweb:featured-playlists') or \
+             uri.startswith('spotifyweb:new-releases') or \
+             uri.startswith('spotifyweb:categories') :
+            ids = uri.split(':')
+            try:
+                sp = spotipy.Spotify(auth=self.token)
+                #sp.trace = True
+                res = sp._get('browse/' + '/'.join(ids[1:]), limit=50)
+                arr = []
+                if res.has_key('categories'):
+                    arr += [ Ref.directory(uri='spotifyweb:categories:'+cat['id']+':playlists',
+                                    name=cat['name']) for cat in res['categories']['items'] ]
+                elif res.has_key('playlists'):
+                    arr += [ Ref.playlist(uri=playlist['uri'],
+                                    name=playlist['name']) for playlist in res['playlists']['items'] ]
+                elif res.has_key('albums'):
+                    arr += [ Ref.album(uri=album['uri'],
+                                    name=album['name']) for album in res['albums']['items'] ]
+                return arr
+            except Exception as e:
+                print('error', e);
+                return []
         else:
             return []
 
