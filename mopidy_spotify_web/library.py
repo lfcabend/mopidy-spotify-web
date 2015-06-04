@@ -119,19 +119,36 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         elif uri.startswith('spotifyweb:featured-playlists') or \
              uri.startswith('spotifyweb:new-releases') or \
              uri.startswith('spotifyweb:categories') :
+            
             ids = uri.split(':')
+            webapi_url = 'browse/' + '/'.join(ids[1:])
+
+            # we browse the /playlists endpoint for categories
+            if len(ids) == 3 and ids[1] == 'categories':
+                webapi_url += '/playlists'
+
             try:
-                res = self.sp_webapi()._get('browse/' + '/'.join(ids[1:]), limit=50)
+                offset = 0
                 arr = []
-                if res.has_key('categories'):
-                    arr += [ Ref.directory(uri='spotifyweb:categories:'+cat['id']+':playlists',
-                                    name=cat['name']) for cat in res['categories']['items'] ]
-                elif res.has_key('playlists'):
-                    arr += [ Ref.playlist(uri=playlist['uri'],
-                                    name=playlist['name']) for playlist in res['playlists']['items'] ]
-                elif res.has_key('albums'):
-                    arr += [ Ref.album(uri=album['uri'],
-                                    name=album['name']) for album in res['albums']['items'] ]
+
+                while True:
+                    results = self.sp_webapi()._get(webapi_url, limit=50, offset=offset)
+                    if results.has_key('categories'):
+                        result_list = results['categories']
+                        arr += [ Ref.directory(uri='spotifyweb:categories:'+cat['id'],
+                                        name=cat['name']) for cat in result_list['items']]
+                    elif results.has_key('playlists'):
+                        result_list = results['playlists']
+                        arr += [ Ref.playlist(uri=playlist['uri'],
+                                        name=playlist['name']) for playlist in result_list['items']]
+                    elif results.has_key('albums'):
+                        result_list = results['albums']
+                        arr += [ Ref.album(uri=album['uri'],
+                                        name=album['name']) for album in result_list['items']]
+                    if result_list['next'] is None:
+                        break
+                    offset = len(arr)
+
                 return arr
             except spotipy.SpotifyException as e:
                 logger.error('error, access_token invalid ?')
