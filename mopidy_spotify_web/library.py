@@ -2,6 +2,11 @@ from __future__ import unicode_literals
 
 import logging
 
+import time
+# no monotonic python 2
+if not hasattr(time, 'monotonic'):
+  time.monotonic = time.time
+
 from mopidy import backend
 from mopidy.models import Ref
 
@@ -14,12 +19,8 @@ from translator import to_mopidy_track
 logger = logging.getLogger(__name__)
 
 
-def get_tracks_from_web_api(token):
+def get_tracks_from_web_api(sp):
     try:
-        logger.debug(
-            'Loading spotify-web library from web-api using token: %s', token)
-
-        sp = spotipy.Spotify(auth=token)
         offset = 0
         tracks = []
 
@@ -48,9 +49,8 @@ def get_fresh_token(config):
             'refresh_token': config['refresh_token'],
         })
         logger.debug("authentication response: %s", response.content)
-        access_token = response.json()['access_token']
-        logger.debug("authentication token: %s", access_token)
-        return access_token
+        token_response = response.json()
+        return token_response
     except requests.exceptions.RequestException as e:
         logger.error('Refreshing the auth token failed: %s', e)
     except ValueError as e:
@@ -63,21 +63,37 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
 
     def __init__(self, *args, **kwargs):
         super(SpotifyWebLibraryProvider, self).__init__(*args, **kwargs)
-        self._cache = None
+
         self._root = [
             Ref.directory(uri='spotifyweb:artists', name='Artists'),
             Ref.directory(uri='spotifyweb:albums', name='Albums'),
             Ref.directory(uri='spotifyweb:featured-playlists', name='Featured playlists'),
             Ref.directory(uri='spotifyweb:new-releases', name='New releases'),
             Ref.directory(uri='spotifyweb:categories', name='Categories')]
-
-    def refresh(self, uri=None):
-        self.token = get_fresh_token(self.backend.config)
-        if self.token is not None:
-            tracks = get_tracks_from_web_api(self.token)
+        self._sp = None
+        
+        sp = self.sp_webapi()
+        if sp is not None:
+            tracks = get_tracks_from_web_api(sp)
         else:
             tracks = []
         self._cache = Cache(tracks)
+
+    def sp_webapi(self, uri=None):
+        if self._sp is not None:
+            #logger.debug('time left', self._access_token_expires - time.monotonic())
+            # 1 minute margin
+            if time.monotonic() < self._access_token_expires - 60:
+                return self._sp
+        token_res = get_fresh_token(self.backend.config)
+        self._access_token = token_res['access_token']
+        self._access_token_expires = time.monotonic() + token_res['expires_in']
+        logger.debug('Loading spotify-web library from '
+                     'web-api using token: %s', self._access_token)
+        self._sp = spotipy.Spotify(auth=self._access_token)
+        #sp.trace = True
+        return self._sp
+
 
     def lookup(self, uri):
         pass
@@ -105,9 +121,7 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
              uri.startswith('spotifyweb:categories') :
             ids = uri.split(':')
             try:
-                sp = spotipy.Spotify(auth=self.token)
-                #sp.trace = True
-                res = sp._get('browse/' + '/'.join(ids[1:]), limit=50)
+                res = self.sp_webapi()._get('browse/' + '/'.join(ids[1:]), limit=50)
                 arr = []
                 if res.has_key('categories'):
                     arr += [ Ref.directory(uri='spotifyweb:categories:'+cat['id']+':playlists',
