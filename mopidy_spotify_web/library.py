@@ -71,13 +71,17 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             Ref.directory(uri='spotifyweb:new-releases', name='New releases'),
             Ref.directory(uri='spotifyweb:categories', name='Categories')]
         self._sp = None
-        
-        sp = self.sp_webapi()
-        if sp is not None:
-            tracks = get_tracks_from_web_api(sp)
-        else:
-            tracks = []
-        self._cache = Cache(tracks)
+       
+        try: 
+            sp = self.sp_webapi()
+            if sp is not None:
+                tracks = get_tracks_from_web_api(sp)
+            else:
+                tracks = []
+            self._cache = Cache(tracks)
+        except spotipy.SpotifyException as e:
+            logger.info('spotipy called failed')
+
 
     def sp_webapi(self, uri=None):
         if self._sp is not None:
@@ -86,6 +90,8 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             if time.monotonic() < self._access_token_expires - 60:
                 return self._sp
         token_res = get_fresh_token(self.backend.config)
+        if not token_res.has_key('access_token'):
+            raise spotipy.SpotifyException(0, '', 'no refresh_token')
         self._access_token = token_res['access_token']
         self._access_token_expires = time.monotonic() + token_res['expires_in']
         logger.debug('Loading spotify-web library from '
@@ -151,7 +157,7 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
 
                 return arr
             except spotipy.SpotifyException as e:
-                logger.error('error, access_token invalid ?')
+                logger.info('spotipy called failed')
                 return []
         else:
             return []
