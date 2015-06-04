@@ -90,7 +90,7 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             if time.monotonic() < self._access_token_expires - 60:
                 return self._sp
         token_res = get_fresh_token(self.backend.config)
-        if not token_res.has_key('access_token'):
+        if token_res is None or not token_res.has_key('access_token'):
             raise spotipy.SpotifyException(0, '', 'no refresh_token')
         self._access_token = token_res['access_token']
         self._access_token_expires = time.monotonic() + token_res['expires_in']
