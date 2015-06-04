@@ -72,9 +72,9 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             Ref.directory(uri='spotifyweb:categories', name='Categories')]
 
     def refresh(self, uri=None):
-        token = get_fresh_token(self.backend.config)
-        if token is not None:
-            tracks = get_tracks_from_web_api(token)
+        self.token = get_fresh_token(self.backend.config)
+        if self.token is not None:
+            tracks = get_tracks_from_web_api(self.token)
         else:
             tracks = []
         self._cache = Cache(tracks)
