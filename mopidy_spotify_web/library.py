@@ -76,6 +76,45 @@ def get_fresh_token_from_spotify(config):
     })
 
 
+def get_spotify_browse_results(sp, uri):
+    if sp is None:
+        return []
+
+    ids = uri.split(':')
+    webapi_url = 'browse/' + '/'.join(ids[1:])
+
+    # we browse the /playlists endpoint for categories
+    if len(ids) == 3 and ids[1] == 'categories':
+        webapi_url += '/playlists'
+
+    offset = 0
+    arr = []
+
+    while True:
+        results = sp._get(webapi_url, limit=50, offset=offset)
+        if results.has_key('categories'):
+            result_list = results['categories']
+            arr += [ Ref.directory(uri='spotifyweb:categories:'+cat['id'],
+                            name=cat['name']) for cat in result_list['items']]
+        elif results.has_key('playlists'):
+            result_list = results['playlists']
+            arr += [ Ref.playlist(uri=playlist['uri'],
+                            name=playlist['name']) for playlist in result_list['items']]
+        elif results.has_key('albums'):
+            result_list = results['albums']
+            arr += [ Ref.album(uri=album['uri'],
+                            name=album['name']) for album in result_list['items']]
+        if result_list['next'] is None:
+            break
+        offset = len(arr)
+
+    return arr
+
+
+def token_is_fresh(sp, access_token_expires):
+    return sp is not None and time.monotonic() < access_token_expires - 60
+
+
 class SpotifyWebLibraryProvider(backend.LibraryProvider):
     root_directory = Ref.directory(uri='spotifyweb:directory',
                                    name='Spotify Web Browse')
@@ -90,35 +129,34 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             Ref.directory(uri='spotifyweb:new-releases', name='New releases'),
             Ref.directory(uri='spotifyweb:categories', name='Categories')]
         self._sp = None
-       
-        try: 
-            sp = self.sp_webapi()
-            if sp is not None:
-                tracks = get_tracks_from_web_api(sp)
-            else:
-                tracks = []
-            self._cache = Cache(tracks)
-        except spotipy.SpotifyException as e:
-            logger.info('spotipy called failed')
+        self._cache = None
+        self._access_token = None
+        self._access_token_expires = None
 
+    def refresh(self, uri=None):
+        sp = self.get_sp_webapi()
+        if sp is not None:
+            logger.debug('Loading spotify-web library from '
+                         'web-api using token: %s', self._access_token)
+            tracks = get_tracks_from_web_api(sp)
+        else:
+            logger.warn('Could not initialize spotipy web api instance')
+            tracks = []
+        self._cache = Cache(tracks)
 
-    def sp_webapi(self, uri=None):
-        if self._sp is not None:
-            #logger.debug('time left', self._access_token_expires - time.monotonic())
-            # 1 minute margin
-            if time.monotonic() < self._access_token_expires - 60:
-                return self._sp
+    def get_sp_webapi(self, uri=None):
+        if token_is_fresh(self._sp, self._access_token_expires):
+            return self._sp
+
         token_res = get_fresh_token(self.backend.config)
         if token_res is None or not token_res.has_key('access_token'):
-            raise spotipy.SpotifyException(0, '', 'no refresh_token')
+            logger.warn('Did not receive authentication token!')
+            return None
+
         self._access_token = token_res['access_token']
         self._access_token_expires = time.monotonic() + token_res['expires_in']
-        logger.debug('Loading spotify-web library from '
-                     'web-api using token: %s', self._access_token)
         self._sp = spotipy.Spotify(auth=self._access_token)
-        #sp.trace = True
         return self._sp
-
 
     def lookup(self, uri):
         pass
@@ -141,45 +179,8 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         elif uri == 'spotifyweb:albums':
             return self._cache.sortedAlbums
             # return Ref directory for all albums
-        elif uri.startswith('spotifyweb:featured-playlists') or \
-             uri.startswith('spotifyweb:new-releases') or \
-             uri.startswith('spotifyweb:categories') :
-            
-            ids = uri.split(':')
-            webapi_url = 'browse/' + '/'.join(ids[1:])
-
-            # we browse the /playlists endpoint for categories
-            if len(ids) == 3 and ids[1] == 'categories':
-                webapi_url += '/playlists'
-
-            try:
-                offset = 0
-                arr = []
-
-                while True:
-                    results = self.sp_webapi()._get(webapi_url, limit=50, offset=offset)
-                    if results.has_key('categories'):
-                        result_list = results['categories']
-                        arr += [ Ref.directory(uri='spotifyweb:categories:'+cat['id'],
-                                        name=cat['name']) for cat in result_list['items']]
-                    elif results.has_key('playlists'):
-                        result_list = results['playlists']
-                        arr += [ Ref.playlist(uri=playlist['uri'],
-                                        name=playlist['name']) for playlist in result_list['items']]
-                    elif results.has_key('albums'):
-                        result_list = results['albums']
-                        arr += [ Ref.album(uri=album['uri'],
-                                        name=album['name']) for album in result_list['items']]
-                    if result_list['next'] is None:
-                        break
-                    offset = len(arr)
-
-                return arr
-            except spotipy.SpotifyException as e:
-                logger.info('spotipy called failed')
-                return []
-        else:
-            return []
+        elif uri.startswith(('spotifyweb:featured-playlists', 'spotifyweb:new-releases', 'spotifyweb:categories')):
+            return get_spotify_browse_results(self._sp, uri)
 
 
 class Cache:

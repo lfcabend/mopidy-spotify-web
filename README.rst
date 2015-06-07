@@ -70,7 +70,8 @@ The following configuration values are available:
   of the Spotify Accounts service. Defaults to https://accounts.spotify.com/api/token.
 
 
-Note: In order to use mopidy-spotify-web the plugin requires to authenticate using OAuth. The
+Note:
+  In order to use mopidy-spotify-web the plugin requires to authenticate using OAuth. The
   easiest way is to use the OAuth bridge from Mopidy. This is configured as a default.
   If you do not wish to use this service on mopidy.com you can authenticate with Spotify directly.
   In order to do this you need to setup an application on https://developer.spotify.com/my-applications/
