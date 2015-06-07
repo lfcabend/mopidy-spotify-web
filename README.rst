@@ -50,7 +50,7 @@ Example configuration::
 
 The following configuration values are available:
 
-- ``spotify/enabled``: If the Spotify extension should be enabled or not.
+- ``spotify_web/enabled``: If the Spotify extension should be enabled or not.
   Defaults to ``true``.
 
 - ``spotify_web/client_id``: Your Spotify application client id. You *must* provide this.
@@ -60,7 +60,7 @@ The following configuration values are available:
 - ``spotify_web/mopidy_token_url``: url to the authorization endpoint
   of the Mopidy OAuth bridge for Spotify. Defaults to https://auth.mopidy.com/spotify/token.
 
-- ``use_mopidy_oauth_bridge``: Use this flag to switch between the Mopidy OAuth bridge and spotify
+- ``spotify_web/use_mopidy_oauth_bridge``: Use this flag to switch between the Mopidy OAuth bridge and spotify
   authentication service. Defaults to true.
 
 - ``spotify_web/refresh_token``: Your Spotify refresh token. This only needs to be provided if you

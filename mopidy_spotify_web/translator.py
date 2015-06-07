@@ -20,11 +20,17 @@ def to_mopidy_track(track):
 def to_mopidy_artists(spotipy_artists):
     artists = []
     for artist in spotipy_artists:
-        uri = "spotifyweb:yourmusic:artist:%s" % artist['id']
+        uri = 'spotifyweb:yourmusic:artist:%s' % artist['id']
         artists.append(Artist(name=artist['name'], uri=uri))
     return artists
 
 
 def to_mopidy_album(spotipy_album):
-    uri = "spotifyweb:yourmusic:album:%s" % spotipy_album['id']
+    uri = 'spotifyweb:yourmusic:album:%s' % spotipy_album['id']
     return Album(name=spotipy_album['name'], uri=uri)
+
+
+def to_sauce_uri(uri):
+    ids = uri.split(':')
+    artist_id = ids[3]
+    return 'spotifyweb:sauce:artist:%s' % artist_id

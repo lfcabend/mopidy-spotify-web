@@ -15,6 +15,7 @@ import requests
 import spotipy
 
 from translator import to_mopidy_track
+from translator import to_sauce_uri
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,8 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
                            name='Featured Playlists')]
         self._root = \
             [Ref.directory(uri='spotifyweb:yourmusic', name='Your Music'),
-             Ref.directory(uri='spotifyweb:browse', name='Browse')]
+             Ref.directory(uri='spotifyweb:browse', name='Browse'),
+             Ref.directory(uri='spotifyweb:sauce', name='Sauce')]
         self._sp = None
         self._cache = None
         self._access_token = None
@@ -161,7 +163,7 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             tracks = []
         self._cache = Cache(tracks)
 
-    def get_sp_webapi(self, uri=None):
+    def get_sp_webapi(self):
         if token_is_fresh(self._sp, self._access_token_expires):
             return self._sp
 
@@ -186,6 +188,8 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             return self.browse_your_music(uri)
         elif uri.startswith('spotifyweb:browse'):
             return self.browse_browse(uri)
+        elif uri.startswith('spotifyweb:sauce'):
+            return self.browse_sauce(uri)
         else:
             return []
 
@@ -194,6 +198,34 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             return self._browse
         else:
             return get_spotify_browse_results(self._sp, uri)
+
+    def browse_sauce(self, uri):
+        if uri == 'spotifyweb:sauce':
+            return [Ref.directory(uri=to_sauce_uri(artist.uri),
+                                  name=artist.name)
+                    for artist in self._cache.sortedArtists]
+        elif uri.startswith('spotifyweb:sauce:artist-toptracks'):
+            ids = uri.split(':')
+            artist_id = ids[3]
+            sp = self.get_sp_webapi()
+            results = sp.artist_top_tracks(artist_id)
+            return [Ref.track(uri=track['uri'], name=track['name'])
+                    for track in results['tracks']]
+        elif uri.startswith('spotifyweb:sauce:artist'):
+            ids = uri.split(':')
+            artist_id = ids[3]
+            sp = self.get_sp_webapi()
+            results = sp.artist_albums(artist_id)
+            arr = [Ref.directory(
+                uri='spotifyweb:sauce:artist-toptracks:%s' % artist_id,
+                name='Top Tracks')]
+            arr += [Ref.album(uri=album['uri'],
+                              name=album['name'])
+                    for album in results['items']]
+            return arr
+        else:
+            return []
+
 
     def browse_your_music(self, uri):
         if uri == 'spotifyweb:yourmusic':
