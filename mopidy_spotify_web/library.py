@@ -226,7 +226,6 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         else:
             return []
 
-
     def browse_your_music(self, uri):
         if uri == 'spotifyweb:yourmusic':
             return self._your_music
