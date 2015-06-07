@@ -42,10 +42,10 @@ def get_tracks_from_web_api(token):
 def get_fresh_token(config):
     try:
         logger.debug("authenticating")
-        auth = (config['client_id'], config['client_secret'])
-        response = requests.post(config['token_url'], auth=auth, data={
-            'grant_type': 'client_credentials',
-        })
+        if config['use_mopidy_oauth_bridge']:
+            response = get_fresh_token_from_mopidy(config)
+        else:
+            response = get_fresh_token_from_spotify(config)
         logger.debug("authentication response: %s", response.content)
         access_token = response.json()['access_token']
         logger.debug("authentication token: %s", access_token)
@@ -54,6 +54,25 @@ def get_fresh_token(config):
         logger.error('Refreshing the auth token failed: %s', e)
     except ValueError as e:
         logger.error('Decoding the JSON auth token response failed: %s', e)
+
+
+def get_fresh_token_from_mopidy(config):
+    mopidy_token_url = config['mopidy_token_url']
+    logger.debug("authentication using mopidy swap service on: %s", mopidy_token_url)
+    auth = (config['client_id'], config['client_secret'])
+    return requests.post(mopidy_token_url, auth=auth, data={
+        'grant_type': 'client_credentials',
+    })
+
+
+def get_fresh_token_from_spotify(config):
+    spotify_token_url = config['spotify_token_url'];
+    logger.debug("authentication using spotify on: %s", spotify_token_url)
+    auth = (config['client_id'], config['client_secret'])
+    return requests.post(spotify_token_url, auth=auth, data={
+        'grant_type': 'refresh_token',
+        'refresh_token': config['refresh_token'],
+    })
 
 
 class SpotifyWebLibraryProvider(backend.LibraryProvider):

@@ -26,7 +26,10 @@ class Extension(ext.Extension):
         schema = super(Extension, self).get_config_schema()
         schema['client_id'] = config.String()
         schema['client_secret'] = config.String()
-        schema['token_url'] = config.String()
+        schema['mopidy_token_url'] = config.String()
+        schema['spotify_token_url'] = config.String()
+        schema['use_mopidy_oauth_bridge'] = config.Boolean()
+        schema['refresh_token'] = config.String()
         return schema
 
     def setup(self, registry):
