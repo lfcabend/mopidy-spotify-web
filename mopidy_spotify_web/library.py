@@ -58,7 +58,8 @@ def get_fresh_token(config):
 
 def get_fresh_token_from_mopidy(config):
     mopidy_token_url = config['mopidy_token_url']
-    logger.debug("authentication using mopidy swap service on: %s", mopidy_token_url)
+    logger.debug("authentication using mopidy swap service on: %s",
+                 mopidy_token_url)
     auth = (config['client_id'], config['client_secret'])
     return requests.post(mopidy_token_url, auth=auth, data={
         'grant_type': 'client_credentials',
@@ -66,7 +67,7 @@ def get_fresh_token_from_mopidy(config):
 
 
 def get_fresh_token_from_spotify(config):
-    spotify_token_url = config['spotify_token_url'];
+    spotify_token_url = config['spotify_token_url']
     logger.debug("authentication using spotify on: %s", spotify_token_url)
     auth = (config['client_id'], config['client_secret'])
     return requests.post(spotify_token_url, auth=auth, data={
