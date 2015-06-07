@@ -81,35 +81,41 @@ def get_spotify_browse_results(sp, uri):
         return []
 
     ids = uri.split(':')
-    webapi_url = 'browse/' + '/'.join(ids[1:])
+    webapi_url = '/'.join(ids[1:])
 
     # we browse the /playlists endpoint for categories
-    if len(ids) == 3 and ids[1] == 'categories':
+    if len(ids) == 4 and ids[2] == 'categories':
         webapi_url += '/playlists'
 
     offset = 0
     arr = []
+    try:
+        while True:
+            results = sp._get(webapi_url, limit=50, offset=offset)
+            if 'categories' in results:
+                result_list = results['categories']
+                browse_uri = 'spotifyweb:browse:categories:'
+                arr += [Ref.directory(uri=browse_uri + cat['id'],
+                                      name=cat['name'])
+                        for cat in result_list['items']]
+            elif 'playlists' in results:
+                result_list = results['playlists']
+                arr += [Ref.playlist(uri=playlist['uri'],
+                                     name=playlist['name'])
+                        for playlist in result_list['items']]
+            elif 'albums' in results:
+                result_list = results['albums']
+                arr += [Ref.album(uri=album['uri'],
+                                  name=album['name'])
+                        for album in result_list['items']]
+            else:
+                result_list = None
 
-    while True:
-        results = sp._get(webapi_url, limit=50, offset=offset)
-        if 'categories' in results:
-            result_list = results['categories']
-            arr += [Ref.directory(uri='spotifyweb:categories:'+cat['id'],
-                    name=cat['name'])
-                    for cat in result_list['items']]
-        elif 'playlists' in results:
-            result_list = results['playlists']
-            arr += [Ref.playlist(uri=playlist['uri'],
-                    name=playlist['name'])
-                    for playlist in result_list['items']]
-        elif 'albums' in results:
-            result_list = results['albums']
-            arr += [Ref.album(uri=album['uri'],
-                    name=album['name'])
-                    for album in result_list['items']]
-        if result_list['next'] is None:
-            break
-        offset = len(arr)
+            if result_list is None or result_list['next'] is None:
+                break
+            offset = len(arr)
+    except spotipy.SpotifyException as e:
+        logger.error('Spotipy error(%s): %s', e.code, e.msg)
 
     return arr
 
@@ -125,13 +131,16 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
     def __init__(self, *args, **kwargs):
         super(SpotifyWebLibraryProvider, self).__init__(*args, **kwargs)
 
-        self._root = [
-            Ref.directory(uri='spotifyweb:artists', name='Artists'),
-            Ref.directory(uri='spotifyweb:albums', name='Albums'),
-            Ref.directory(uri='spotifyweb:featured-playlists',
-                          name='Featured playlists'),
-            Ref.directory(uri='spotifyweb:new-releases', name='New releases'),
-            Ref.directory(uri='spotifyweb:categories', name='Categories')]
+        self._your_music = \
+            [Ref.directory(uri='spotifyweb:yourmusic:songs', name='Songs'),
+             Ref.directory(uri='spotifyweb:yourmusic:albums', name='Albums'),
+             Ref.directory(uri='spotifyweb:yourmusic:artists', name='Artists')]
+        self._browse = \
+            [Ref.directory(uri='spotifyweb:browse:new-releases', name='New releases'),
+             Ref.directory(uri='spotifyweb:browse:categories', name='Categories')]
+        self._root = \
+            [Ref.directory(uri='spotifyweb:yourmusic', name='Your Music'),
+             Ref.directory(uri='spotifyweb:browse', name='Browse')]
         self._sp = None
         self._cache = None
         self._access_token = None
@@ -169,24 +178,40 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         logger.debug("Request to browse %s in SpotifyWebLibraryProvider", uri)
         if uri == self.root_directory.uri:
             return self._root
-        elif uri == 'spotifyweb:artists':
+        elif uri.startswith('spotifyweb:yourmusic'):
+            return self.browse_your_music(uri)
+        elif uri.startswith('spotifyweb:browse'):
+            return self.browse_browse(uri)
+        else:
+            return []
+
+    def browse_browse(self, uri):
+        if uri == 'spotifyweb:browse':
+            return self._browse
+        else:
+            return get_spotify_browse_results(self._sp, uri)
+
+    def browse_your_music(self, uri):
+        if uri == 'spotifyweb:yourmusic':
+            return self._your_music
+        if uri == 'spotifyweb:yourmusic:artists':
             return self._cache.sortedArtists
             # return Ref directory with all artists
-        elif uri.startswith('spotifyweb:artist:'):
+        elif uri.startswith('spotifyweb:yourmusic:artist:'):
             # get artist uri
             return self._cache.artists2albums.get(uri)
             # return Ref directory with all albums for artist
-        elif uri.startswith('spotifyweb:album:'):
+        elif uri.startswith('spotifyweb:yourmusic:album:'):
             # get album uri
             return self._cache.albums2tracks.get(uri)
             # return Ref directory with all tracks for album
-        elif uri == 'spotifyweb:albums':
+        elif uri == 'spotifyweb:yourmusic:albums':
             return self._cache.sortedAlbums
             # return Ref directory for all albums
-        elif uri.startswith(('spotifyweb:featured-playlists',
-                             'spotifyweb:new-releases',
-                             'spotifyweb:categories')):
-            return get_spotify_browse_results(self._sp, uri)
+        elif uri == 'spotifyweb:yourmusic:songs':
+            return self._cache.tracks
+        else:
+            return []
 
 
 class Cache:
