@@ -137,9 +137,11 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
              Ref.directory(uri='spotifyweb:yourmusic:artists', name='Artists')]
         self._browse = \
             [Ref.directory(uri='spotifyweb:browse:new-releases',
-                           name='New releases'),
+                           name='New Releases'),
              Ref.directory(uri='spotifyweb:browse:categories',
-                           name='Categories')]
+                           name='Genres & Moods'),
+             Ref.directory(uri='spotifyweb:browse:featured-playlists',
+                           name='Featured Playlists')]
         self._root = \
             [Ref.directory(uri='spotifyweb:yourmusic', name='Your Music'),
              Ref.directory(uri='spotifyweb:browse', name='Browse')]
