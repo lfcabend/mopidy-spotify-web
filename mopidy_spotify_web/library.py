@@ -5,7 +5,7 @@ import logging
 import time
 # no monotonic python 2
 if not hasattr(time, 'monotonic'):
-  time.monotonic = time.time
+    time.monotonic = time.time
 
 from mopidy import backend
 from mopidy.models import Ref
@@ -92,18 +92,21 @@ def get_spotify_browse_results(sp, uri):
 
     while True:
         results = sp._get(webapi_url, limit=50, offset=offset)
-        if results.has_key('categories'):
+        if 'categories' in results:
             result_list = results['categories']
-            arr += [ Ref.directory(uri='spotifyweb:categories:'+cat['id'],
-                            name=cat['name']) for cat in result_list['items']]
-        elif results.has_key('playlists'):
+            arr += [Ref.directory(uri='spotifyweb:categories:'+cat['id'],
+                    name=cat['name'])
+                    for cat in result_list['items']]
+        elif 'playlists' in results:
             result_list = results['playlists']
-            arr += [ Ref.playlist(uri=playlist['uri'],
-                            name=playlist['name']) for playlist in result_list['items']]
-        elif results.has_key('albums'):
+            arr += [Ref.playlist(uri=playlist['uri'],
+                    name=playlist['name'])
+                    for playlist in result_list['items']]
+        elif 'albums' in results:
             result_list = results['albums']
-            arr += [ Ref.album(uri=album['uri'],
-                            name=album['name']) for album in result_list['items']]
+            arr += [Ref.album(uri=album['uri'],
+                    name=album['name'])
+                    for album in result_list['items']]
         if result_list['next'] is None:
             break
         offset = len(arr)
@@ -125,7 +128,8 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         self._root = [
             Ref.directory(uri='spotifyweb:artists', name='Artists'),
             Ref.directory(uri='spotifyweb:albums', name='Albums'),
-            Ref.directory(uri='spotifyweb:featured-playlists', name='Featured playlists'),
+            Ref.directory(uri='spotifyweb:featured-playlists',
+                          name='Featured playlists'),
             Ref.directory(uri='spotifyweb:new-releases', name='New releases'),
             Ref.directory(uri='spotifyweb:categories', name='Categories')]
         self._sp = None
@@ -149,7 +153,7 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             return self._sp
 
         token_res = get_fresh_token(self.backend.config)
-        if token_res is None or not token_res.has_key('access_token'):
+        if token_res is None or 'access_token' not in token_res:
             logger.warn('Did not receive authentication token!')
             return None
 
@@ -179,7 +183,9 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         elif uri == 'spotifyweb:albums':
             return self._cache.sortedAlbums
             # return Ref directory for all albums
-        elif uri.startswith(('spotifyweb:featured-playlists', 'spotifyweb:new-releases', 'spotifyweb:categories')):
+        elif uri.startswith(('spotifyweb:featured-playlists',
+                             'spotifyweb:new-releases',
+                             'spotifyweb:categories')):
             return get_spotify_browse_results(self._sp, uri)
 
 

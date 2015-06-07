@@ -99,6 +99,7 @@ v0.2.0 (unreleased)
 - Various internal cleanups to make code more Pythonic.
 - Switch to using Mopidy's token swap service for simpler authentication.
 - Sorted the albums and artists.
+- Integrated Spotify browse feature.
 
 v0.1.0 (2015-05-03)
 -------------------
