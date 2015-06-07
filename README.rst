@@ -19,10 +19,6 @@ Dependencies
 
 - A non-Facebook Spotify username and password.
 
-- A registered application on https://developer.spotify.com, follow the instruction
-  on https://developer.spotify.com/web-api/tutorial/. Create a  Client ID and Secret Key,
-  then finish the tutorial to obtain a refresh token.
-
 - ``Mopidy`` >= 0.19.0. The music server that Mopidy-Spotify-Tunigo extends.
 
 - ``Mopidy-Spotify`` >= 1.2.0. The Mopidy extension for playing music from
@@ -42,12 +38,14 @@ install the package from PyPI::
 Configuration
 =============
 
+To run this extension you need to authorize it against you Spotify account, to do this visit
+https://www.mopidy.com/authenticate/#spotify and follow the instructions.
+
 Example configuration::
 
     [spotify_web]
-    spotify_client_id = 'YOUR_CLIENT_ID'
-    spotify_client_secret = 'YOUR_SECRET'
-    refresh_token = 'YOUR_REFRESH_TOKEN'
+    client_id = ... client_id value you got from mopidy.com ...
+    client_secret = ... client_secret value you got from mopidy.com ...
 
 The following configuration values are available:
 
@@ -56,12 +54,10 @@ The following configuration values are available:
 
 - ``spotify_web/client_id``: Your Spotify application client id. You *must* provide this.
 
-- ``spotify_web/spotify_client_secret``: Your Spotify application secret key. You *must* provide this.
+- ``spotify_web/client_secret``: Your Spotify application secret key. You *must* provide this.
 
-- ``spotify_web/refresh_token``: Your Spotify refresh token. You *must* provide this.
-
-- ``spotify_web/auth_server_url``: url to the authorization endpoint
-  of the Spotify Accounts service. Defaults to https://accounts.spotify.com/api/token.
+- ``spotify_web/token_url``: url to the authorization endpoint
+  of the Mopidy OAuth bridge for Spotify. Defaults to https://auth.mopidy.com/spotify/token.
 
 
 Project resources
@@ -81,6 +77,7 @@ v0.2.0 (unreleased)
 - Use ``requests`` module for fetching tokens.
 - Blocking initialization moved out of critical startup path.
 - Various internal cleanups to make code more Pythonic.
+- Switch to using Mopidy's token swap service for simpler authentication.
 
 v0.1.0 (2015-05-03)
 -------------------

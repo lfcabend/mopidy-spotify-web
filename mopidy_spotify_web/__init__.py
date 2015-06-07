@@ -24,10 +24,9 @@ class Extension(ext.Extension):
 
     def get_config_schema(self):
         schema = super(Extension, self).get_config_schema()
-        schema['spotify_client_id'] = config.String()
-        schema['spotify_client_secret'] = config.String()
-        schema['refresh_token'] = config.String()
-        schema['auth_server_url'] = config.String()
+        schema['client_id'] = config.String()
+        schema['client_secret'] = config.String()
+        schema['token_url'] = config.String()
         return schema
 
     def setup(self, registry):
