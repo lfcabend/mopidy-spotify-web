@@ -21,24 +21,25 @@ logger = logging.getLogger(__name__)
 
 
 def get_tracks_from_web_api(sp):
-    try:
-        offset = 0
-        tracks = []
+    return get_from_sp(sp, get_next_spotify_tracks_items,
+                       spotify_get_tracks_process_results)
 
-        while True:
-            results = sp.current_user_saved_tracks(limit=50, offset=offset)
-            logger.debug('On spotify-web Got results %s for offset %s',
-                         len(results['items']), offset)
-            for item in results['items']:
-                tracks.append(to_mopidy_track(item['track']))
-                offset += 1
-            if results['next'] is None:
-                break
 
-        return tracks
-    except spotipy.SpotifyException as e:
-        logger.error('Spotipy error(%s): %s', e.code, e.msg)
-        return []
+def spotify_get_tracks_process_results(results):
+    logger.debug('Processing spotify get tracks result')
+    tracks = [to_mopidy_track(item['track'])
+               for item in results['items']]
+    cont = results['next'] is not None
+    logger.debug('Spotify get tracks result cont: %s' % cont)
+    return tracks, cont
+
+
+def get_next_spotify_tracks_items(sp, uri, limit, offset):
+    logger.debug('Going to get spotify tracks,'
+                 ' with limit %s with offset %s'
+                 % (str(limit), str(offset)))
+
+    return sp.current_user_saved_tracks(limit=limit, offset=offset)
 
 
 def get_fresh_token(config):
@@ -77,10 +78,57 @@ def get_fresh_token_from_spotify(config):
     })
 
 
-def get_spotify_browse_results(sp, uri):
+def get_from_sp(sp, get_next_items, process_results, uri=None):
     if sp is None:
         return []
+    arr = []
+    try:
+        arr = get_from_sp_while_next(sp, get_next_items, process_results, uri)
+    except spotipy.SpotifyException as e:
+        logger.error('Spotipy error(%s): %s', e.code, e.msg)
 
+    return arr
+
+
+def get_from_sp_while_next(sp, get_next_items, process_results, uri=None, arr=[], limit=50, offset=0):
+    results = get_next_items(sp, uri, limit, offset)
+    new_arr, cont = process_results(results)
+    arr += new_arr
+    if cont:
+        new_offset = len(arr)
+        return get_from_sp_while_next(sp, get_next_items, process_results, uri, arr, limit, new_offset)
+    else:
+        return arr
+
+
+def spotify_browse_process_results(results):
+    logger.debug('Processing spotify browse result')
+    if 'categories' in results:
+        result_list = results['categories']
+        browse_uri = 'spotifyweb:browse:categories:'
+        arr = [Ref.directory(uri=browse_uri + cat['id'],
+                             name=cat['name'])
+               for cat in result_list['items']]
+    elif 'playlists' in results:
+        result_list = results['playlists']
+        arr = [Ref.playlist(uri=playlist['uri'],
+                            name=playlist['name'])
+               for playlist in result_list['items']]
+    elif 'albums' in results:
+        result_list = results['albums']
+        arr = [Ref.album(uri=album['uri'],
+                         name=album['name'])
+               for album in result_list['items']]
+    else:
+        result_list = None
+        arr = []
+
+    cont = result_list is not None and result_list['next'] is not None
+    logger.debug('Spotify browse result cont: %s' % cont)
+    return arr, cont
+
+
+def get_next_spotify_browse_items(sp, uri, limit, offset):
     ids = uri.split(':')
     webapi_url = '/'.join(ids[1:])
 
@@ -88,37 +136,16 @@ def get_spotify_browse_results(sp, uri):
     if len(ids) == 4 and ids[2] == 'categories':
         webapi_url += '/playlists'
 
-    offset = 0
-    arr = []
-    try:
-        while True:
-            results = sp._get(webapi_url, limit=50, offset=offset)
-            if 'categories' in results:
-                result_list = results['categories']
-                browse_uri = 'spotifyweb:browse:categories:'
-                arr += [Ref.directory(uri=browse_uri + cat['id'],
-                                      name=cat['name'])
-                        for cat in result_list['items']]
-            elif 'playlists' in results:
-                result_list = results['playlists']
-                arr += [Ref.playlist(uri=playlist['uri'],
-                                     name=playlist['name'])
-                        for playlist in result_list['items']]
-            elif 'albums' in results:
-                result_list = results['albums']
-                arr += [Ref.album(uri=album['uri'],
-                                  name=album['name'])
-                        for album in result_list['items']]
-            else:
-                result_list = None
+    logger.debug('Going to get spotify browse on url: %s,'
+                 ' with limit %s with offset %s'
+                 % (webapi_url, str(limit), str(offset)))
 
-            if result_list is None or result_list['next'] is None:
-                break
-            offset = len(arr)
-    except spotipy.SpotifyException as e:
-        logger.error('Spotipy error(%s): %s', e.code, e.msg)
+    return sp._get(webapi_url, limit=limit, offset=offset)
 
-    return arr
+
+def get_spotify_browse_results(sp, uri):
+    return get_from_sp(sp, get_next_spotify_browse_items,
+                       spotify_browse_process_results, uri)
 
 
 def token_is_fresh(sp, access_token_expires):
