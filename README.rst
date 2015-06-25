@@ -91,7 +91,7 @@ Project resources
 Changelog
 =========
 
-v0.2.0 (unreleased)
+v0.2.0 (2015-06-25)
 -------------------
 
 - Use ``requests`` module for fetching tokens.
@@ -100,6 +100,7 @@ v0.2.0 (unreleased)
 - Switch to using Mopidy's token swap service for simpler authentication.
 - Sorted the albums and artists.
 - Integrated Spotify browse feature.
+- Added feature to browse all albums and top tracks of your artists.
 
 v0.1.0 (2015-05-03)
 -------------------
