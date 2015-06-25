@@ -28,7 +28,7 @@ def get_tracks_from_web_api(sp):
 def spotify_get_tracks_process_results(results):
     logger.debug('Processing spotify get tracks result')
     tracks = [to_mopidy_track(item['track'])
-               for item in results['items']]
+              for item in results['items']]
     cont = results['next'] is not None
     logger.debug('Spotify get tracks result cont: %s' % cont)
     return tracks, cont
@@ -40,6 +40,55 @@ def get_next_spotify_tracks_items(sp, uri, limit, offset):
                  % (str(limit), str(offset)))
 
     return sp.current_user_saved_tracks(limit=limit, offset=offset)
+
+
+def get_top_tracks_from_web_api(sp, uri):
+    if sp is None:
+        return []
+    try:
+        results = sp.artist_top_tracks(get_artist_from_uri(uri))
+        logger.debug('Processing spotify top get tracks result')
+        arr = [Ref.track(uri=track['uri'], name=track['name'])
+               for track in results['tracks']]
+    except spotipy.SpotifyException as e:
+        logger.error('Spotipy error(%s): %s', e.code, e.msg)
+
+    return arr
+
+
+def get_albums_from_web_api(sp, uri):
+    arr = [Ref.directory(
+           uri='spotifyweb:sauce:artist-toptracks:%s'
+           % get_artist_from_uri(uri),
+           name='Top Tracks')]
+    arr += get_from_sp(sp, get_albums_items,
+                       spotify_albums_results, uri)
+    return arr
+
+
+def get_albums_items(sp, uri, limit, offset):
+    logger.debug('Going to get albums,'
+                 ' with limit %s with offset %s'
+                 % (str(limit), str(offset)))
+
+    return sp.artist_albums(get_artist_from_uri(uri),
+                            limit=limit, offset=offset)
+
+
+def get_artist_from_uri(uri):
+    ids = uri.split(':')
+    return ids[3]
+
+
+def spotify_albums_results(results):
+    logger.debug('Processing spotify albums result')
+    albums = [Ref.album(uri=album['uri'],
+                        name=album['name'])
+              for album in results['items']]
+    logger.debug('Processing spotify albums result; next %s' % results['next'])
+    cont = results['next'] is not None
+    logger.debug('Spotify get albums result cont: %s' % cont)
+    return albums, cont
 
 
 def get_fresh_token(config):
@@ -81,7 +130,6 @@ def get_fresh_token_from_spotify(config):
 def get_from_sp(sp, get_next_items, process_results, uri=None):
     if sp is None:
         return []
-    arr = []
     try:
         arr = get_from_sp_while_next(sp, get_next_items, process_results, uri)
     except spotipy.SpotifyException as e:
@@ -90,13 +138,18 @@ def get_from_sp(sp, get_next_items, process_results, uri=None):
     return arr
 
 
-def get_from_sp_while_next(sp, get_next_items, process_results, uri=None, arr=[], limit=50, offset=0):
+def get_from_sp_while_next(sp, get_next_items, process_results,
+                           uri=None, arr=None, limit=50, offset=0):
     results = get_next_items(sp, uri, limit, offset)
     new_arr, cont = process_results(results)
+    if arr is None:
+        arr = []
     arr += new_arr
     if cont:
         new_offset = len(arr)
-        return get_from_sp_while_next(sp, get_next_items, process_results, uri, arr, limit, new_offset)
+        return get_from_sp_while_next(sp, get_next_items,
+                                      process_results, uri,
+                                      arr, limit, new_offset)
     else:
         return arr
 
@@ -232,24 +285,9 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
                                   name=artist.name)
                     for artist in self._cache.sortedArtists]
         elif uri.startswith('spotifyweb:sauce:artist-toptracks'):
-            ids = uri.split(':')
-            artist_id = ids[3]
-            sp = self.get_sp_webapi()
-            results = sp.artist_top_tracks(artist_id)
-            return [Ref.track(uri=track['uri'], name=track['name'])
-                    for track in results['tracks']]
+            return get_top_tracks_from_web_api(self.get_sp_webapi(), uri)
         elif uri.startswith('spotifyweb:sauce:artist'):
-            ids = uri.split(':')
-            artist_id = ids[3]
-            sp = self.get_sp_webapi()
-            results = sp.artist_albums(artist_id)
-            arr = [Ref.directory(
-                uri='spotifyweb:sauce:artist-toptracks:%s' % artist_id,
-                name='Top Tracks')]
-            arr += [Ref.album(uri=album['uri'],
-                              name=album['name'])
-                    for album in results['items']]
-            return arr
+            return get_albums_from_web_api(self.get_sp_webapi(), uri)
         else:
             return []
 
