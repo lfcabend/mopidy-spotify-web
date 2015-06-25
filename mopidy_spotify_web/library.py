@@ -226,7 +226,7 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         self._root = \
             [Ref.directory(uri='spotifyweb:yourmusic', name='Your Music'),
              Ref.directory(uri='spotifyweb:browse', name='Browse'),
-             Ref.directory(uri='spotifyweb:sauce', name='Sauce')]
+             Ref.directory(uri='spotifyweb:sauce', name='Your Artists')]
         self._sp = None
         self._cache = None
         self._access_token = None
