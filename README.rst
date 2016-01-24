@@ -91,6 +91,11 @@ Project resources
 Changelog
 =========
 
+v0.3.0 (2016-01-24)
+-------------------
+
+- Albums are now sorted by track number
+
 v0.2.0 (2015-06-25)
 -------------------
 

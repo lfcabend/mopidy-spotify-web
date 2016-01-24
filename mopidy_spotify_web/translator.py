@@ -14,7 +14,8 @@ def to_mopidy_track(track):
     return Track(uri=track['uri'],
                  name=track['name'],
                  album=to_mopidy_album(track['album']),
-                 artists=to_mopidy_artists(track['artists']))
+                 artists=to_mopidy_artists(track['artists']),
+                 track_no=track['track_number'])
 
 
 def to_mopidy_artists(spotipy_artists):

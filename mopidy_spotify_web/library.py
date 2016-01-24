@@ -297,6 +297,9 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
         if uri == 'spotifyweb:yourmusic:artists':
             return self._cache.sortedArtists
             # return Ref directory with all artists
+        elif uri == 'spotifyweb:yourmusic:albums':
+            return self._cache.sortedAlbums
+            # return Ref directory for all albums
         elif uri.startswith('spotifyweb:yourmusic:artist:'):
             # get artist uri
             return self._cache.artists2albums.get(uri)
@@ -305,9 +308,6 @@ class SpotifyWebLibraryProvider(backend.LibraryProvider):
             # get album uri
             return self._cache.albums2tracks.get(uri)
             # return Ref directory with all tracks for album
-        elif uri == 'spotifyweb:yourmusic:albums':
-            return self._cache.sortedAlbums
-            # return Ref directory for all albums
         elif uri == 'spotifyweb:yourmusic:songs':
             return self._cache.tracks
         else:
@@ -322,9 +322,11 @@ class Cache:
         self.sortedAlbums = []
         self.sortedArtists = []
         self.tracks = []
+        self.trackDict = {}
         for t in tracks:
             logger.debug("Adding track %s", t.name)
             self.tracks.append(Ref.track(name=t.name, uri=t.uri))
+            self.trackDict[t.uri] = t
             if hasattr(t, 'album'):
                 self.add_album_and_artists(t)
 
@@ -332,6 +334,14 @@ class Cache:
         cmp_dir_names = lambda x, y: cmp(x.name, y.name)
         self.sortedAlbums.sort(cmp_dir_names)
         self.sortedArtists.sort(cmp_dir_names)
+        logger.debug('Sorting albums by track number')
+        for key in self.albums2tracks:
+            logger.debug('Sorting album %s', key)
+            album = self.albums2tracks[key]
+            cmp_tracknos = lambda x, y: \
+                cmp(self.trackDict[x.uri].track_no,
+                    self.trackDict[y.uri].track_no)
+            album.sort(cmp_tracknos)
 
     def add_album_and_artists(self, track):
         album = track.album
